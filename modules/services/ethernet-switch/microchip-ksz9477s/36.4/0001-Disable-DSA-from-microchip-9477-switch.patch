@@ -1,0 +1,218 @@
+From bfd867d50fd5d59791aa2469ea4ccdf9f4d3f8c0 Mon Sep 17 00:00:00 2001
+From: Matti Paasto <matti.paasto@unikie.com>
+Date: Tue, 29 Apr 2025 11:07:00 +0300
+Subject: [PATCH] Disable-DSA-from-microchip-9477-switch
+
+Signed-off-by: Matti Paasto <matti.paasto@unikie.com>
+---
+ arch/arm64/configs/defconfig            |  5 +++++
+ drivers/net/dsa/microchip/Kconfig       | 13 ++++++++++++
+ drivers/net/dsa/microchip/ksz9477.c     | 12 ++++++++++-
+ drivers/net/dsa/microchip/ksz9477_i2c.c | 19 +++++++++++++++--
+ drivers/net/dsa/microchip/ksz_common.c  | 28 +++++++++++++++++++++++--
+ drivers/net/dsa/microchip/ksz_common.h  |  4 ++++
+ 6 files changed, 76 insertions(+), 5 deletions(-)
+
+diff --git a/arch/arm64/configs/defconfig b/arch/arm64/configs/defconfig
+index dc016a3a1..46a75f753 100644
+--- a/arch/arm64/configs/defconfig
++++ b/arch/arm64/configs/defconfig
+@@ -1307,3 +1307,8 @@ CONFIG_FUNCTION_TRACER=y
+ # CONFIG_FUNCTION_GRAPH_TRACER is not set
+ # CONFIG_DYNAMIC_FTRACE is not set
+ CONFIG_MEMTEST=y
++CONFIG_NET_DSA_MICROCHIP_KSZ_COMMON=y
++CONFIG_NET_DSA_MICROCHIP_KSZ9477=y
++CONFIG_NET_DSA_MICROCHIP_KSZ9477_I2C=y
++CONFIG_NET_DSA_MICROCHIP_DISABLE_DSA=y
++CONFIG_NET_DSA_MICROCHIP_ENABLE_MODULE_PARAM=y
+diff --git a/drivers/net/dsa/microchip/Kconfig b/drivers/net/dsa/microchip/Kconfig
+index c9e2a8989..2ee1fb52e 100644
+--- a/drivers/net/dsa/microchip/Kconfig
++++ b/drivers/net/dsa/microchip/Kconfig
+@@ -10,6 +10,19 @@ menuconfig NET_DSA_MICROCHIP_KSZ9477
+ 	help
+ 	  This driver adds support for Microchip KSZ9477 switch chips.
+ 
++config NET_DSA_MICROCHIP_DISABLE_DSA
++	bool "Disable DSA functionality, static port member config only"
++        depends on NET_DSA_MICROCHIP_KSZ_COMMON
++	default n
++	help
++	 No DSA for 9477, just init
++config NET_DSA_MICROCHIP_ENABLE_MODULE_PARAM
++        bool "Enable port membership values by module parameters"
++        depends on NET_DSA_MICROCHIP_KSZ_COMMON
++        default n
++        help
++         Overwrite device tree parameters for KSZ9477 if given
++
+ config NET_DSA_MICROCHIP_KSZ9477_I2C
+ 	tristate "KSZ9477 series I2C connected switch driver"
+ 	depends on NET_DSA_MICROCHIP_KSZ9477 && I2C
+diff --git a/drivers/net/dsa/microchip/ksz9477.c b/drivers/net/dsa/microchip/ksz9477.c
+index bf788e17f..febaf6418 100644
+--- a/drivers/net/dsa/microchip/ksz9477.c
++++ b/drivers/net/dsa/microchip/ksz9477.c
+@@ -1364,7 +1364,14 @@ static int ksz9477_setup(struct dsa_switch *ds)
+ 	/* Required for port partitioning. */
+ 	ksz9477_cfg32(dev, REG_SW_QM_CTRL__4, UNICAST_VLAN_BOUNDARY,
+ 		      true);
+-
++#ifdef CONFIG_NET_DSA_MICROCHIP_DISABLE_DSA
++	{
++		int port;
++		for (port = 0; port < dev->phy_port_cnt; port++)
++			ksz9477_phy_errata_setup(dev, port);
++	}
++	return 0;
++#endif
+ 	/* Do not work correctly with tail tagging. */
+ 	ksz_cfg(dev, REG_SW_MAC_CTRL_0, SW_CHECK_LENGTH, false);
+ 
+@@ -1618,6 +1625,9 @@ int ksz9477_switch_register(struct ksz_device *dev)
+ 	ret = ksz_switch_register(dev, &ksz9477_dev_ops);
+ 	if (ret)
+ 		return ret;
++#ifdef CONFIG_NET_DSA_MICROCHIP_DISABLE_DSA
++	return 0;
++#endif
+ 
+ 	for (i = 0; i < dev->phy_port_cnt; ++i) {
+ 		if (!dsa_is_user_port(dev->ds, i))
+diff --git a/drivers/net/dsa/microchip/ksz9477_i2c.c b/drivers/net/dsa/microchip/ksz9477_i2c.c
+index f3afb8b8c..84a327d1a 100644
+--- a/drivers/net/dsa/microchip/ksz9477_i2c.c
++++ b/drivers/net/dsa/microchip/ksz9477_i2c.c
+@@ -14,14 +14,26 @@
+ 
+ KSZ_REGMAP_TABLE(ksz9477, not_used, 16, 0, 0);
+ 
++#ifdef CONFIG_NET_DSA_MICROCHIP_ENABLE_MODULE_PARAM
++#ifndef TOTAL_PORT_NUM
++#define TOTAL_PORT_NUM			7
++#endif
++	static int port_member[TOTAL_PORT_NUM] = { [0 ... TOTAL_PORT_NUM-1] = -1 };
++	static int num_elements;
++#endif
++
++
+ static int ksz9477_i2c_probe(struct i2c_client *i2c,
+ 			     const struct i2c_device_id *i2c_id)
+ {
+ 	struct regmap_config rc;
+ 	struct ksz_device *dev;
+ 	int i, ret;
+-
+ 	dev = ksz_switch_alloc(&i2c->dev, i2c);
++#ifdef CONFIG_NET_DSA_MICROCHIP_ENABLE_MODULE_PARAM
++	dev->port_member = port_member;  // Pointing to the static array
++	dev->num_elements = num_elements;
++#endif
+ 	if (!dev)
+ 		return -ENOMEM;
+ 
+@@ -106,7 +118,10 @@ static struct i2c_driver ksz9477_i2c_driver = {
+ 	.shutdown = ksz9477_i2c_shutdown,
+ 	.id_table = ksz9477_i2c_id,
+ };
+-
++#ifdef CONFIG_NET_DSA_MICROCHIP_ENABLE_MODULE_PARAM
++module_param_array(port_member, int, &num_elements, 0);
++MODULE_PARM_DESC(port_member, "Port membership mask");
++#endif
+ module_i2c_driver(ksz9477_i2c_driver);
+ 
+ MODULE_AUTHOR("Tristram Ha <Tristram.Ha@microchip.com>");
+diff --git a/drivers/net/dsa/microchip/ksz_common.c b/drivers/net/dsa/microchip/ksz_common.c
+index 4c4e6990c..ed9be1af8 100644
+--- a/drivers/net/dsa/microchip/ksz_common.c
++++ b/drivers/net/dsa/microchip/ksz_common.c
+@@ -383,7 +383,7 @@ int ksz_switch_register(struct ksz_device *dev,
+ 
+ 	if (dev->reset_gpio) {
+ 		gpiod_set_value_cansleep(dev->reset_gpio, 1);
+-		usleep_range(10000, 12000);
++		usleep_range(200000, 210000); // 150ms was tested to be enoguh to get I2C bootstrap low
+ 		gpiod_set_value_cansleep(dev->reset_gpio, 0);
+ 		msleep(100);
+ 	}
+@@ -402,6 +402,10 @@ int ksz_switch_register(struct ksz_device *dev,
+ 	if (ret)
+ 		return ret;
+ 
++#ifdef CONFIG_NET_DSA_MICROCHIP_DISABLE_DSA
++	/* call setup func before setting up port members, no full dsa init/setup */
++	dev->ds->ops->setup(dev->ds);
++#endif
+ 	/* Host port interface will be self detected, or specifically set in
+ 	 * device tree.
+ 	 */
+@@ -426,13 +430,30 @@ int ksz_switch_register(struct ksz_device *dev,
+ 				}
+ 				of_get_phy_mode(port,
+ 						&dev->ports[port_num].interface);
++#ifdef CONFIG_NET_DSA_MICROCHIP_DISABLE_DSA
++                                {
++                                        u32 member = -1;
++#ifdef CONFIG_NET_DSA_MICROCHIP_ENABLE_MODULE_PARAM
++                                        if (dev->num_elements > port_num) {
++                                                member = dev->port_member[port_num];
++                                                dev->dev_ops->cfg_port_member(dev, port_num, member & dev->port_mask);
++                                        }
++#endif
++                                        if (member == (u32)-1) {  // If module param was NOT set, fallback to DT
++                                                if (!of_property_read_u32(port, "member", &member)) {
++                                                        dev->dev_ops->cfg_port_member(dev, port_num, member & dev->port_mask);
++                                                }
++                                        }
++                                }
++#endif
++
+ 			}
+ 			of_node_put(ports);
+ 		}
+ 		dev->synclko_125 = of_property_read_bool(dev->dev->of_node,
+ 							 "microchip,synclko-125");
+ 	}
+-
++#ifndef CONFIG_NET_DSA_MICROCHIP_DISABLE_DSA
+ 	ret = dsa_register_switch(dev->ds);
+ 	if (ret) {
+ 		dev->dev_ops->exit(dev);
+@@ -444,6 +465,7 @@ int ksz_switch_register(struct ksz_device *dev,
+ 
+ 	/* Start the MIB timer. */
+ 	schedule_delayed_work(&dev->mib_read, 0);
++#endif
+ 
+ 	return 0;
+ }
+@@ -458,7 +480,9 @@ void ksz_switch_remove(struct ksz_device *dev)
+ 	}
+ 
+ 	dev->dev_ops->exit(dev);
++#ifndef CONFIG_NET_DSA_MICROCHIP_DISABLE_DSA
+ 	dsa_unregister_switch(dev->ds);
++#endif
+ 
+ 	if (dev->reset_gpio)
+ 		gpiod_set_value_cansleep(dev->reset_gpio, 1);
+diff --git a/drivers/net/dsa/microchip/ksz_common.h b/drivers/net/dsa/microchip/ksz_common.h
+index 1597c6398..7af8c972c 100644
+--- a/drivers/net/dsa/microchip/ksz_common.h
++++ b/drivers/net/dsa/microchip/ksz_common.h
+@@ -91,6 +91,10 @@ struct ksz_device {
+ 	u32 overrides;			/* chip functions set by user */
+ 	u16 host_mask;
+ 	u16 port_mask;
++	#ifdef CONFIG_NET_DSA_MICROCHIP_ENABLE_MODULE_PARAM
++	int *port_member;  // Pointer for port member mask
++    int num_elements; 
++	#endif
+ };
+ 
+ struct alu_struct {
+-- 
+2.43.0
+
