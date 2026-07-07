@@ -154,9 +154,9 @@
     })
     (ghaf-configuration {
       basename = "nvidia-jetson-orin-nx";
-      somvar = "salukiv3";
+      somvar = "a603";
       variant = "debug";
-      hardwareModule = nixMods.hardware-nvidia-jetson-orin-nx-salukiv3;
+      hardwareModule = nixMods.hardware-nvidia-jetson-orin-nx-a603;
       extraConfig = {
         reference.profiles.mvp-orinuser-trial.enable = true;
         # Enable Orin Device
@@ -170,9 +170,8 @@
           # Ethernet passthrough
           nx.enableNetvmEthernetPCIPassthrough = lib.mkForce true;
 
-          # Saluiki v3 specific setup
-          salukiv3-overlay = true;
-          camera-toshiba-alvium.enable = true;
+          # A603 specific setup
+          a603-overlay = true;
         };
       };
     })

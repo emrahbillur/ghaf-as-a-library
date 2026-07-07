@@ -8,43 +8,14 @@
 { inputs, lib, ... }:
 {
   flake.nixosModules = {
-    salukiv3-overlay.imports = [
-      ./saluki/v3/salukiv3.nix
-    ];
-
-    salukiv3s-overlay.imports = [
-      ./saluki/v3s/salukiv3s.nix
-    ];
-
-    salukiv3m-overlay.imports = [
-      ./saluki/v3m/salukiv3m.nix
-    ];
-
-    salukiv3x-overlay.imports = [
-      ./saluki/v3x/salukiv3x.nix
-    ];
-
-    camera-gmsl2-alvium.imports = [
-      ../camera/camera-gmsl2-alvium.nix
-    ];
-
-    camera-toshiba-alvium.imports = [
-      ../camera/camera-toshiba-alvium.nix
+    a603-overlay.imports = [
+      ./A603/a603.nix
     ];
 
     hardware-nvidia-jetson-orin-agx-industrial-base.imports = [
       inputs.ghaf.nixosModules.jetpack
       inputs.ghaf.nixosModules.hardware-nvidia-jetson-orin-agx-industrial
       ./resources/agx-industrial-base.nix
-      ./usb
-    ];
-
-    hardware-nvidia-jetson-orin-agx-industrial-salukiv3x.imports = [
-      inputs.ghaf.nixosModules.jetpack
-      inputs.ghaf.nixosModules.hardware-nvidia-jetson-orin-agx-industrial
-      inputs.self.nixosModules.salukiv3x-overlay
-      inputs.self.nixosModules.camera-gmsl2-alvium
-      ./resources/agx-industrial-salukiv3x.nix
       ./usb
     ];
 
@@ -69,32 +40,12 @@
       ./usb    
     ];
 
-    hardware-nvidia-jetson-orin-nx-salukiv3.imports = [
+    hardware-nvidia-jetson-orin-nx-a603.imports = [
       inputs.ghaf.nixosModules.jetpack
       inputs.ghaf.nixosModules.hardware-nvidia-jetson-orin-nx
-      inputs.self.nixosModules.salukiv3-overlay
-      inputs.self.nixosModules.camera-toshiba-alvium
-      ./resources/nx-salukiv3.nix
+      inputs.self.nixosModules.a603-overlay
+      ./resources/nx-a603.nix
       ./usb    
     ];
-
-    hardware-nvidia-jetson-orin-nx-salukiv3s.imports = [
-      inputs.ghaf.nixosModules.jetpack
-      inputs.ghaf.nixosModules.hardware-nvidia-jetson-orin-nx
-      inputs.self.nixosModules.salukiv3s-overlay
-      inputs.self.nixosModules.camera-gmsl2-alvium
-      ./resources/nx-salukiv3s.nix
-      ./usb    
-    ];
-
-    hardware-nvidia-jetson-orin-nx-salukiv3m.imports = [
-      inputs.ghaf.nixosModules.jetpack
-      inputs.ghaf.nixosModules.hardware-nvidia-jetson-orin-nx
-      inputs.self.nixosModules.salukiv3m-overlay
-      inputs.self.nixosModules.camera-gmsl2-alvium
-      ./resources/nx-salukiv3m.nix
-      ./usb    
-    ];
-
   };
 }
