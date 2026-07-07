@@ -80,6 +80,10 @@
       inherit hardwareModule;
       extraModules =
         commonModule
+        ++ [
+          nixMods.gal-profile
+            { gal.personalize.debug.enable = variant == "debug"; }
+        ]
         ++ extraModules;
     };
   in {
@@ -185,7 +189,7 @@
   #     hostConfig = tgt.hostConfig.extendModules {
   #       modules = [
   #         {
-  #           fog.enableGraphics = true;
+  #           gal.enableGraphics = true;
   #           ghaf.profiles.graphics.enable = lib.mkForce true;
   #           ghaf.graphics.login-manager.enable = lib.mkForce true;
   #           ghaf.graphics.cosmic.enable = lib.mkForce true;
@@ -204,7 +208,7 @@
         modules = [
           inputs.ghaf.nixosModules.cross-compilation-from-x86_64
           /*
-          May later add the local cross compile overlay from fog-ghaf
+          May later add the local cross compile overlay from gal
           */
         ];
       };

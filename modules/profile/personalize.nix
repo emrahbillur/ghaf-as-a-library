@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 { config, lib, ... }:
 let
-  cfg = config.fog.personalize.debug;
+  cfg = config.gal.personalize.debug;
   inherit (lib)
     mkEnableOption
     mkOption
@@ -11,8 +11,8 @@ let
     ;
 in
 {
-  options.fog.personalize.debug = {
-    enable = mkEnableOption "Enable the FOG debug personalization module.";
+  options.gal.personalize.debug = {
+    enable = mkEnableOption "Enable the GAL debug personalization module.";
 
     authorizedSshKeys = mkOption {
       description = "List of authorized ssh keys for the development team.";

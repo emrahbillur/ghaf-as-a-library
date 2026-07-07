@@ -34,12 +34,13 @@ in {
     # A603 kernel patches
     boot.kernelPatches = [
       {
+        /* I cannot reach A603 kernel patches yet. There is a compiled image only */
         name = "A603 kernel patches";
         patch =
           {
-            "36.4.3" = "";
-            "36.4.4" = "";
-            "36.5.0" = "";
+            "36.4.3" = null;
+            "36.4.4" = null;
+            "36.5.0" = null;
           }
           ."${pkgs.nvidia-jetpack.l4tMajorMinorPatchVersion}";      }
     ];

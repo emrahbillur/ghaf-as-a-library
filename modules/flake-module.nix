@@ -8,10 +8,8 @@
   ];
 
   flake.nixosModules = {
-    host.imports = [./microvm/host.nix];
-    netvm.imports = [./microvm/netvm.nix];
     netvm-services.imports = [
+      ./services/avahi-service
     ];
-    hardware-network = ./microvm/hardware-network.nix;
   };
 }

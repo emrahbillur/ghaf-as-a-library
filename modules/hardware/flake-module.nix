@@ -1,7 +1,7 @@
 # Copyright 2022-2025 TII (SSRC) and the Ghaf contributors
 # SPDX-License-Identifier: Apache-2.0
 #
-# FOG hardware modules extend ghaf's hardware modules with:
+# extra hardware modules extend ghaf's hardware modules with:
 # - USB passthrough configuration
 # - Resource overrides (where needed)
 #
